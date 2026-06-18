@@ -90,4 +90,16 @@ Replace `your_api_key_here` with your own key. Do not commit your `.env` file.
 streamlit run app.py
 ```
 
+## Running Tests
+
+StudyMate uses `pytest` for simple project tests.
+
+Run the tests with:
+
+```bash
+python3 -m pytest -q
+```
+
+These tests do not need a real OpenAI API key.
+
 This is only the starting structure. The real RAG features will be added in small steps.

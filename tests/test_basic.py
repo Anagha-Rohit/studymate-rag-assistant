@@ -38,6 +38,19 @@ class FakeDocument:
         self.metadata = metadata
 
 
+class FixedSizeTextSplitter:
+    """Small test helper that splits text without needing LangChain installed."""
+
+    def __init__(self, chunk_size: int):
+        self.chunk_size = chunk_size
+
+    def split_text(self, text: str) -> list[str]:
+        return [
+            text[index : index + self.chunk_size]
+            for index in range(0, len(text), self.chunk_size)
+        ]
+
+
 def test_project_files_exist():
     """Check that the main starter files are present."""
     expected_files = [
@@ -119,6 +132,31 @@ def test_split_text_into_chunks_uses_text_splitter(monkeypatch):
     chunks = split_text_into_chunks("StudyMate notes")
 
     assert chunks == ["Study", "Mate notes"]
+
+
+def test_split_text_into_chunks_returns_list(monkeypatch):
+    """Check that chunking returns a normal Python list."""
+    monkeypatch.setattr(
+        "src.ingest._create_text_splitter",
+        lambda: FixedSizeTextSplitter(chunk_size=20),
+    )
+
+    chunks = split_text_into_chunks("These are short notes.")
+
+    assert isinstance(chunks, list)
+
+
+def test_split_text_into_chunks_creates_multiple_chunks_for_long_text(monkeypatch):
+    """Check that long notes are split into more than one chunk."""
+    monkeypatch.setattr(
+        "src.ingest._create_text_splitter",
+        lambda: FixedSizeTextSplitter(chunk_size=50),
+    )
+
+    long_text = "StudyMate helps students revise from uploaded notes. " * 10
+    chunks = split_text_into_chunks(long_text)
+
+    assert len(chunks) > 1
 
 
 def test_split_text_into_chunks_handles_empty_text():
