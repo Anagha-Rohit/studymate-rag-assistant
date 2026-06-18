@@ -66,6 +66,35 @@ def load_pdf_file(uploaded_file) -> str:
     return text
 
 
+def _create_text_splitter():
+    """Create the LangChain text splitter used for RAG chunks."""
+    try:
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+    except ImportError:
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+    return RecursiveCharacterTextSplitter(
+        chunk_size=800,
+        chunk_overlap=100,
+    )
+
+
+def split_text_into_chunks(text: str) -> list[str]:
+    """Split a document into smaller chunks for RAG.
+
+    RAG apps do not usually send a whole textbook or lecture file to the AI at
+    once. Instead, we split the text into smaller overlapping chunks so the app
+    can search for the most useful pieces later.
+    """
+    if not text.strip():
+        return []
+
+    text_splitter = _create_text_splitter()
+    chunks = text_splitter.split_text(text)
+
+    return [chunk for chunk in chunks if chunk.strip()]
+
+
 def split_text(text: str, chunk_size: int = 500) -> list[str]:
     """Split text into simple chunks.
 

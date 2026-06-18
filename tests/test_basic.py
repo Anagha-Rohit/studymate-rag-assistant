@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from src.flashcards import generate_flashcards
-from src.ingest import load_pdf_file, load_txt_file, split_text
+from src.ingest import load_pdf_file, load_txt_file, split_text, split_text_into_chunks
 from src.quiz_generator import generate_quiz_questions
 
 
@@ -81,6 +81,28 @@ def test_load_pdf_file_raises_error_when_no_text(monkeypatch):
         assert str(error) == "No readable text was found in this PDF."
     else:
         raise AssertionError("Expected load_pdf_file to raise ValueError.")
+
+
+def test_split_text_into_chunks_uses_text_splitter(monkeypatch):
+    """Check that StudyMate uses the configured text splitter."""
+
+    class FakeTextSplitter:
+        def split_text(self, text):
+            return [text[:5], text[5:]]
+
+    monkeypatch.setattr(
+        "src.ingest._create_text_splitter",
+        lambda: FakeTextSplitter(),
+    )
+
+    chunks = split_text_into_chunks("StudyMate notes")
+
+    assert chunks == ["Study", "Mate notes"]
+
+
+def test_split_text_into_chunks_handles_empty_text():
+    """Check that empty notes return no chunks."""
+    assert split_text_into_chunks("   ") == []
 
 
 def test_study_helpers_return_lists():

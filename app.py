@@ -3,7 +3,7 @@
 
 import streamlit as st
 
-from src.ingest import load_pdf_file, load_txt_file
+from src.ingest import load_pdf_file, load_txt_file, split_text_into_chunks
 
 
 st.set_page_config(page_title="StudyMate")
@@ -44,10 +44,13 @@ if uploaded_file is not None:
             st.warning("Please upload a TXT or PDF file.")
 
         if note_text:
+            chunks = split_text_into_chunks(note_text)
+
             st.success("File loaded successfully.")
             st.write(f"File name: {file_name}")
             st.write(f"Detected file type: {file_type}")
             st.write(f"Number of characters extracted: {len(note_text)}")
+            st.write(f"Number of chunks created: {len(chunks)}")
 
             # Show only the beginning so long lecture notes do not fill the page.
             st.text_area(
@@ -56,6 +59,10 @@ if uploaded_file is not None:
                 height=250,
                 disabled=True,
             )
+
+            if chunks:
+                with st.expander("Show first chunk"):
+                    st.write(chunks[0])
     except ValueError as error:
         st.error(str(error))
 
