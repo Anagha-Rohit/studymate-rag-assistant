@@ -1,10 +1,18 @@
 # StudyMate Streamlit entry point.
 # This file is the first simple version of the web app.
 
+from dotenv import load_dotenv
 import streamlit as st
 
-from src.ingest import load_pdf_file, load_txt_file, split_text_into_chunks
+from src.ingest import (
+    create_vector_store,
+    load_pdf_file,
+    load_txt_file,
+    split_text_into_chunks,
+)
 
+
+load_dotenv()
 
 st.set_page_config(page_title="StudyMate")
 
@@ -61,10 +69,23 @@ if uploaded_file is not None:
             )
 
             if chunks:
+                file_key = f"{file_name}-{len(note_text)}"
+
+                if st.session_state.get("uploaded_file_key") != file_key:
+                    st.session_state["vector_store"] = create_vector_store(chunks)
+                    st.session_state["uploaded_file_key"] = file_key
+
+                st.success("Vector store is ready for questions.")
+
                 with st.expander("Show first chunk"):
                     st.write(chunks[0])
     except ValueError as error:
         st.error(str(error))
+    except Exception:
+        st.error(
+            "Could not create the vector store. Check that OPENAI_API_KEY is set "
+            "in your .env file."
+        )
 
 if ask_clicked:
     st.info("AI question answering will be added next.")

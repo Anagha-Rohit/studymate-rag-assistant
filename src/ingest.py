@@ -95,6 +95,47 @@ def split_text_into_chunks(text: str) -> list[str]:
     return [chunk for chunk in chunks if chunk.strip()]
 
 
+def _create_openai_embeddings():
+    """Create the OpenAI embedding model used by LangChain."""
+    from langchain_openai import OpenAIEmbeddings
+
+    return OpenAIEmbeddings()
+
+
+def _create_chroma_vector_store(chunks: list[str], metadata: list[dict], embeddings):
+    """Create a Chroma vector store from text chunks and metadata."""
+    from langchain_chroma import Chroma
+
+    return Chroma.from_texts(
+        texts=chunks,
+        embedding=embeddings,
+        metadatas=metadata,
+        collection_name="studymate_notes",
+    )
+
+
+def create_vector_store(chunks: list[str]):
+    """Create a Chroma vector store from text chunks.
+
+    Embeddings are number-based summaries of text. They help the computer find
+    chunks that are similar in meaning, even if the exact words are different.
+    ChromaDB stores those embeddings so StudyMate can search the notes later.
+    """
+    clean_chunks = [chunk.strip() for chunk in chunks if chunk.strip()]
+
+    if not clean_chunks:
+        raise ValueError("No text chunks were provided for the vector store.")
+
+    metadata = []
+
+    for index, _chunk in enumerate(clean_chunks, start=1):
+        metadata.append({"chunk_number": index})
+
+    embeddings = _create_openai_embeddings()
+
+    return _create_chroma_vector_store(clean_chunks, metadata, embeddings)
+
+
 def split_text(text: str, chunk_size: int = 500) -> list[str]:
     """Split text into simple chunks.
 

@@ -3,7 +3,13 @@
 from pathlib import Path
 
 from src.flashcards import generate_flashcards
-from src.ingest import load_pdf_file, load_txt_file, split_text, split_text_into_chunks
+from src.ingest import (
+    create_vector_store,
+    load_pdf_file,
+    load_txt_file,
+    split_text,
+    split_text_into_chunks,
+)
 from src.quiz_generator import generate_quiz_questions
 
 
@@ -103,6 +109,43 @@ def test_split_text_into_chunks_uses_text_splitter(monkeypatch):
 def test_split_text_into_chunks_handles_empty_text():
     """Check that empty notes return no chunks."""
     assert split_text_into_chunks("   ") == []
+
+
+def test_create_vector_store_adds_chunk_metadata(monkeypatch):
+    """Check that chunks are stored with simple chunk number metadata."""
+    saved_inputs = {}
+
+    class FakeEmbeddings:
+        pass
+
+    class FakeVectorStore:
+        pass
+
+    def fake_create_vector_store(chunks, metadata, embeddings):
+        saved_inputs["chunks"] = chunks
+        saved_inputs["metadata"] = metadata
+        saved_inputs["embeddings"] = embeddings
+        return FakeVectorStore()
+
+    monkeypatch.setattr("src.ingest._create_openai_embeddings", lambda: FakeEmbeddings())
+    monkeypatch.setattr("src.ingest._create_chroma_vector_store", fake_create_vector_store)
+
+    vector_store = create_vector_store([" First chunk ", "Second chunk"])
+
+    assert isinstance(vector_store, FakeVectorStore)
+    assert saved_inputs["chunks"] == ["First chunk", "Second chunk"]
+    assert saved_inputs["metadata"] == [{"chunk_number": 1}, {"chunk_number": 2}]
+    assert isinstance(saved_inputs["embeddings"], FakeEmbeddings)
+
+
+def test_create_vector_store_rejects_empty_chunks():
+    """Check that empty chunks do not create an empty vector store."""
+    try:
+        create_vector_store([" ", ""])
+    except ValueError as error:
+        assert str(error) == "No text chunks were provided for the vector store."
+    else:
+        raise AssertionError("Expected create_vector_store to raise ValueError.")
 
 
 def test_study_helpers_return_lists():
