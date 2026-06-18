@@ -3,6 +3,8 @@
 This file creates question-and-answer flashcards from uploaded lecture notes.
 """
 
+from src.config import require_openai_api_key
+
 FLASHCARD_NOT_FOUND = "The notes do not contain enough information to make flashcards."
 
 
@@ -30,6 +32,8 @@ def _create_chat_model():
     """Create the OpenAI chat model used for flashcard generation."""
     from langchain_openai import ChatOpenAI
 
+    require_openai_api_key()
+
     return ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
@@ -56,7 +60,13 @@ def generate_flashcards(vector_store, topic=None, number=5) -> str:
     number = max(1, int(number))
 
     # Retrieve note chunks first so the model only sees relevant course notes.
-    retrieved_documents = vector_store.similarity_search(search_query, k=number)
+    try:
+        retrieved_documents = vector_store.similarity_search(search_query, k=number)
+    except Exception as error:
+        raise ValueError(
+            "Could not search your uploaded notes for flashcards. Try uploading "
+            "the file again."
+        ) from error
 
     if not retrieved_documents:
         return FLASHCARD_NOT_FOUND
@@ -68,15 +78,23 @@ def generate_flashcards(vector_store, topic=None, number=5) -> str:
         context=context,
     )
 
-    chat_model = _create_chat_model()
-    response = chat_model.invoke(
-        [
-            (
-                "system",
-                "You create flashcards using only the provided study notes.",
-            ),
-            ("human", prompt),
-        ]
-    )
+    try:
+        chat_model = _create_chat_model()
+        response = chat_model.invoke(
+            [
+                (
+                    "system",
+                    "You create flashcards using only the provided study notes.",
+                ),
+                ("human", prompt),
+            ]
+        )
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(
+            "Could not generate flashcards with OpenAI. Check your API key, "
+            "billing, or internet connection, then try again."
+        ) from error
 
     return response.content

@@ -40,6 +40,12 @@ def show_pipeline_status(file_uploaded, text_extracted, chunks_created, vector_s
         st.write(f"{label}: {status}")
 
 
+def clear_uploaded_notes_state():
+    """Remove old note data when a new upload cannot be prepared."""
+    st.session_state.pop("vector_store", None)
+    st.session_state.pop("uploaded_file_key", None)
+
+
 st.sidebar.title("How to use StudyMate")
 st.sidebar.write("1. Upload a TXT or PDF file with your lecture notes.")
 st.sidebar.write("2. Wait for StudyMate to extract and prepare the text.")
@@ -99,11 +105,10 @@ else:
         elif file_name.lower().endswith(".pdf"):
             note_text = load_pdf_file(uploaded_file)
         else:
-            st.warning("Please upload a TXT or PDF file.")
+            raise ValueError("Unsupported file type. Please upload a TXT or PDF file.")
 
         if not note_text.strip():
-            st.session_state.pop("vector_store", None)
-            st.session_state.pop("uploaded_file_key", None)
+            clear_uploaded_notes_state()
             st.error("This file has no readable text. Try another TXT or PDF file.")
         else:
             text_extracted = True
@@ -128,7 +133,7 @@ else:
                 file_key = f"{file_name}-{len(note_text)}"
 
                 if st.session_state.get("uploaded_file_key") != file_key:
-                    st.session_state.pop("vector_store", None)
+                    clear_uploaded_notes_state()
                     st.session_state["vector_store"] = create_vector_store(chunks)
                     st.session_state["uploaded_file_key"] = file_key
 
@@ -138,19 +143,16 @@ else:
                 with st.expander("Show first chunk"):
                     st.write(chunks[0])
             else:
-                st.session_state.pop("vector_store", None)
-                st.session_state.pop("uploaded_file_key", None)
+                clear_uploaded_notes_state()
                 st.error("No chunks were created from this file. Try a file with more text.")
     except ValueError as error:
-        st.session_state.pop("vector_store", None)
-        st.session_state.pop("uploaded_file_key", None)
+        clear_uploaded_notes_state()
         st.error(str(error))
     except Exception:
-        st.session_state.pop("vector_store", None)
-        st.session_state.pop("uploaded_file_key", None)
+        clear_uploaded_notes_state()
         st.error(
-            "Could not create the vector store. Check that OPENAI_API_KEY is set "
-            "in your .env file."
+            "Could not prepare this file. Check that it is a readable TXT or PDF "
+            "file, then try again."
         )
 
 show_pipeline_status(file_uploaded, text_extracted, chunks_created, vector_store_ready)
@@ -179,10 +181,12 @@ if ask_clicked:
 
                     with st.expander(f"Source {index}: chunk {chunk_number}"):
                         st.write(source_chunk["text"])
+        except ValueError as error:
+            st.error(str(error))
         except Exception:
             st.error(
-                "Could not answer the question. Check that OPENAI_API_KEY is set "
-                "in your .env file."
+                "Could not answer the question right now. Check your OpenAI API "
+                "key, billing, or internet connection, then try again."
             )
 
 if flashcards_clicked:
@@ -206,10 +210,12 @@ if flashcards_clicked:
                 st.write("Topic: General notes")
 
             st.text(flashcards)
+        except ValueError as error:
+            st.error(str(error))
         except Exception:
             st.error(
-                "Could not generate flashcards. Check that OPENAI_API_KEY is set "
-                "in your .env file."
+                "Could not generate flashcards right now. Check your OpenAI API "
+                "key, billing, or internet connection, then try again."
             )
 
 if quiz_clicked:
@@ -233,10 +239,12 @@ if quiz_clicked:
                 st.write("Topic: General notes")
 
             st.text(quiz)
+        except ValueError as error:
+            st.error(str(error))
         except Exception:
             st.error(
-                "Could not generate the quiz. Check that OPENAI_API_KEY is set "
-                "in your .env file."
+                "Could not generate the quiz right now. Check your OpenAI API "
+                "key, billing, or internet connection, then try again."
             )
 
 if exam_mode_clicked:
@@ -272,10 +280,12 @@ if exam_mode_clicked:
                 for index, exam_question in enumerate(exam_questions, start=1):
                     with st.expander(f"Model answer {index}"):
                         st.write(exam_question["model_answer"])
+        except ValueError as error:
+            st.error(str(error))
         except Exception:
             st.error(
-                "Could not generate Exam Mode questions. Check that OPENAI_API_KEY "
-                "is set in your .env file."
+                "Could not generate Exam Mode questions right now. Check your "
+                "OpenAI API key, billing, or internet connection, then try again."
             )
 
 st.write(

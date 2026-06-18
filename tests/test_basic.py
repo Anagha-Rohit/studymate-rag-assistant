@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from src.flashcards import FLASHCARD_NOT_FOUND, generate_flashcards
+from src.config import require_openai_api_key
 from src.ingest import (
     create_vector_store,
     load_pdf_file,
@@ -51,6 +52,38 @@ class FixedSizeTextSplitter:
         ]
 
 
+class BrokenVectorStore:
+    """Small test helper that simulates a broken vector store."""
+
+    def similarity_search(self, question, k):
+        raise RuntimeError("database error")
+
+
+def test_require_openai_api_key_missing_is_friendly(monkeypatch):
+    """Check that a missing API key gives a helpful message."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    try:
+        require_openai_api_key()
+    except ValueError as error:
+        assert "OPENAI_API_KEY is missing" in str(error)
+        assert ".env" in str(error)
+    else:
+        raise AssertionError("Expected require_openai_api_key to raise ValueError.")
+
+
+def test_require_openai_api_key_rejects_placeholder(monkeypatch):
+    """Check that the example placeholder is not treated as a real key."""
+    monkeypatch.setenv("OPENAI_API_KEY", "your_api_key_here")
+
+    try:
+        require_openai_api_key()
+    except ValueError as error:
+        assert "real OpenAI API key" in str(error)
+    else:
+        raise AssertionError("Expected require_openai_api_key to raise ValueError.")
+
+
 def test_project_files_exist():
     """Check that the main starter files are present."""
     expected_files = [
@@ -60,6 +93,7 @@ def test_project_files_exist():
         ".gitignore",
         "README.md",
         "AGENTS.md",
+        "src/config.py",
         "src/ingest.py",
         "src/rag_chain.py",
         "src/quiz_generator.py",
@@ -247,6 +281,16 @@ def test_answer_question_handles_no_retrieved_notes():
     assert result == {"answer": ANSWER_NOT_FOUND, "source_chunks": []}
 
 
+def test_answer_question_handles_vector_store_errors():
+    """Check that vector store failures do not expose technical details."""
+    try:
+        answer_question(BrokenVectorStore(), "What is binary search?")
+    except ValueError as error:
+        assert str(error) == "Could not search your uploaded notes. Try uploading the file again."
+    else:
+        raise AssertionError("Expected answer_question to raise ValueError.")
+
+
 def test_generate_flashcards_uses_retrieved_notes(monkeypatch):
     """Check that flashcards are generated from retrieved source chunks."""
     saved_inputs = {}
@@ -314,6 +358,16 @@ def test_generate_flashcards_handles_no_retrieved_notes():
     flashcards = generate_flashcards(FakeVectorStore(), topic="biology")
 
     assert flashcards == FLASHCARD_NOT_FOUND
+
+
+def test_generate_flashcards_handles_vector_store_errors():
+    """Check that flashcard search errors are beginner-friendly."""
+    try:
+        generate_flashcards(BrokenVectorStore(), topic="Big O")
+    except ValueError as error:
+        assert "Could not search your uploaded notes for flashcards" in str(error)
+    else:
+        raise AssertionError("Expected generate_flashcards to raise ValueError.")
 
 
 def test_generate_quiz_uses_retrieved_notes(monkeypatch):
@@ -392,6 +446,16 @@ def test_generate_quiz_handles_no_retrieved_notes():
     quiz = generate_quiz(FakeVectorStore(), topic="chemistry")
 
     assert quiz == QUIZ_NOT_FOUND
+
+
+def test_generate_quiz_handles_vector_store_errors():
+    """Check that quiz search errors are beginner-friendly."""
+    try:
+        generate_quiz(BrokenVectorStore(), topic="recursion")
+    except ValueError as error:
+        assert "Could not search your uploaded notes for a quiz" in str(error)
+    else:
+        raise AssertionError("Expected generate_quiz to raise ValueError.")
 
 
 def test_generate_exam_mode_questions_uses_retrieved_notes(monkeypatch):
@@ -483,6 +547,16 @@ def test_generate_exam_mode_questions_handles_no_retrieved_notes():
 
     assert questions == []
     assert EXAM_MODE_NOT_FOUND == "The notes do not contain enough information for exam mode."
+
+
+def test_generate_exam_mode_questions_handles_vector_store_errors():
+    """Check that Exam Mode search errors are beginner-friendly."""
+    try:
+        generate_exam_mode_questions(BrokenVectorStore(), topic="arrays")
+    except ValueError as error:
+        assert "Could not search your uploaded notes for Exam Mode" in str(error)
+    else:
+        raise AssertionError("Expected generate_exam_mode_questions to raise ValueError.")
 
 
 def test_study_helpers_return_lists():

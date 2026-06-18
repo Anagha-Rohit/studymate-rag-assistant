@@ -5,6 +5,8 @@ This file creates practice quiz questions from uploaded lecture notes.
 
 import json
 
+from src.config import require_openai_api_key
+
 
 QUIZ_NOT_FOUND = "The notes do not contain enough information to make a quiz."
 EXAM_MODE_NOT_FOUND = "The notes do not contain enough information for exam mode."
@@ -70,6 +72,8 @@ def _create_chat_model():
     """Create the OpenAI chat model used for quiz generation."""
     from langchain_openai import ChatOpenAI
 
+    require_openai_api_key()
+
     return ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
@@ -96,7 +100,13 @@ def generate_quiz(vector_store, topic=None, number=5) -> str:
     number = max(1, int(number))
 
     # Retrieve note chunks first so quiz questions are grounded in the notes.
-    retrieved_documents = vector_store.similarity_search(search_query, k=number)
+    try:
+        retrieved_documents = vector_store.similarity_search(search_query, k=number)
+    except Exception as error:
+        raise ValueError(
+            "Could not search your uploaded notes for a quiz. Try uploading "
+            "the file again."
+        ) from error
 
     if not retrieved_documents:
         return QUIZ_NOT_FOUND
@@ -108,16 +118,24 @@ def generate_quiz(vector_store, topic=None, number=5) -> str:
         context=context,
     )
 
-    chat_model = _create_chat_model()
-    response = chat_model.invoke(
-        [
-            (
-                "system",
-                "You create quizzes using only the provided study notes.",
-            ),
-            ("human", prompt),
-        ]
-    )
+    try:
+        chat_model = _create_chat_model()
+        response = chat_model.invoke(
+            [
+                (
+                    "system",
+                    "You create quizzes using only the provided study notes.",
+                ),
+                ("human", prompt),
+            ]
+        )
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(
+            "Could not generate the quiz with OpenAI. Check your API key, "
+            "billing, or internet connection, then try again."
+        ) from error
 
     return response.content
 
@@ -165,7 +183,13 @@ def generate_exam_mode_questions(vector_store, topic=None, number=10) -> list[di
     number = min(10, max(3, int(number)))
 
     # Retrieve note chunks first so the exam questions stay grounded in the notes.
-    retrieved_documents = vector_store.similarity_search(search_query, k=number)
+    try:
+        retrieved_documents = vector_store.similarity_search(search_query, k=number)
+    except Exception as error:
+        raise ValueError(
+            "Could not search your uploaded notes for Exam Mode. Try uploading "
+            "the file again."
+        ) from error
 
     if not retrieved_documents:
         return []
@@ -177,16 +201,24 @@ def generate_exam_mode_questions(vector_store, topic=None, number=10) -> list[di
         context=context,
     )
 
-    chat_model = _create_chat_model()
-    response = chat_model.invoke(
-        [
-            (
-                "system",
-                "You create exam-style questions using only the provided study notes.",
-            ),
-            ("human", prompt),
-        ]
-    )
+    try:
+        chat_model = _create_chat_model()
+        response = chat_model.invoke(
+            [
+                (
+                    "system",
+                    "You create exam-style questions using only the provided study notes.",
+                ),
+                ("human", prompt),
+            ]
+        )
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(
+            "Could not generate Exam Mode questions with OpenAI. Check your "
+            "API key, billing, or internet connection, then try again."
+        ) from error
 
     try:
         return _parse_exam_mode_response(response.content)

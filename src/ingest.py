@@ -4,6 +4,8 @@ Later this file will load PDF/TXT files, split text into chunks, create
 embeddings, and save everything in ChromaDB.
 """
 
+from src.config import require_openai_api_key
+
 
 def load_text_file(file_path: str) -> str:
     """Read a plain text file and return its contents."""
@@ -18,6 +20,9 @@ def load_txt_file(uploaded_file) -> str:
     UTF-8. If the file has a few unusual characters, we replace them instead of
     crashing the app.
     """
+    if hasattr(uploaded_file, "seek"):
+        uploaded_file.seek(0)
+
     file_bytes = uploaded_file.getvalue()
 
     try:
@@ -99,6 +104,8 @@ def _create_openai_embeddings():
     """Create the OpenAI embedding model used by LangChain."""
     from langchain_openai import OpenAIEmbeddings
 
+    require_openai_api_key()
+
     return OpenAIEmbeddings()
 
 
@@ -131,9 +138,16 @@ def create_vector_store(chunks: list[str]):
     for index, _chunk in enumerate(clean_chunks, start=1):
         metadata.append({"chunk_number": index})
 
-    embeddings = _create_openai_embeddings()
-
-    return _create_chroma_vector_store(clean_chunks, metadata, embeddings)
+    try:
+        embeddings = _create_openai_embeddings()
+        return _create_chroma_vector_store(clean_chunks, metadata, embeddings)
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(
+            "Could not create the vector store. Check your OpenAI API key and "
+            "try uploading the notes again."
+        ) from error
 
 
 def split_text(text: str, chunk_size: int = 500) -> list[str]:

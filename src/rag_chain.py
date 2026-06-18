@@ -4,6 +4,8 @@ This file connects retrieved note chunks to a chat model so answers come from
 the student's uploaded notes.
 """
 
+from src.config import require_openai_api_key
+
 ANSWER_NOT_FOUND = "The notes do not contain enough information to answer this question."
 
 
@@ -28,6 +30,8 @@ Answer:
 def _create_chat_model():
     """Create the OpenAI chat model used for answering questions."""
     from langchain_openai import ChatOpenAI
+
+    require_openai_api_key()
 
     return ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -78,7 +82,12 @@ def answer_question(vector_store, question: str) -> dict:
         return {"answer": "Please enter a question.", "source_chunks": []}
 
     # Ask the vector store for the chunks that best match the question.
-    retrieved_documents = vector_store.similarity_search(question, k=4)
+    try:
+        retrieved_documents = vector_store.similarity_search(question, k=4)
+    except Exception as error:
+        raise ValueError(
+            "Could not search your uploaded notes. Try uploading the file again."
+        ) from error
 
     if not retrieved_documents:
         return {"answer": ANSWER_NOT_FOUND, "source_chunks": []}
@@ -86,16 +95,24 @@ def answer_question(vector_store, question: str) -> dict:
     context = _format_documents_for_prompt(retrieved_documents)
     prompt = PROMPT_TEMPLATE.format(context=context, question=question)
 
-    chat_model = _create_chat_model()
-    response = chat_model.invoke(
-        [
-            (
-                "system",
-                "You answer questions using only the provided study notes.",
-            ),
-            ("human", prompt),
-        ]
-    )
+    try:
+        chat_model = _create_chat_model()
+        response = chat_model.invoke(
+            [
+                (
+                    "system",
+                    "You answer questions using only the provided study notes.",
+                ),
+                ("human", prompt),
+            ]
+        )
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(
+            "Could not get an answer from OpenAI. Check your API key, billing, "
+            "or internet connection, then try again."
+        ) from error
 
     return {
         "answer": response.content,
