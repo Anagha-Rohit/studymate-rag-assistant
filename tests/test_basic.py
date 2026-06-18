@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from src.flashcards import generate_flashcards
-from src.ingest import load_txt_file, split_text
+from src.ingest import load_pdf_file, load_txt_file, split_text
 from src.quiz_generator import generate_quiz_questions
 
 
@@ -59,6 +59,28 @@ def test_load_txt_file_handles_decoding_errors():
 
     assert "Hello" in text
     assert "StudyMate" in text
+
+
+def test_load_pdf_file_raises_error_when_no_text(monkeypatch):
+    """Check that a PDF with no readable text gives a simple error."""
+
+    class FakePage:
+        def extract_text(self):
+            return None
+
+    class FakeReader:
+        pages = [FakePage()]
+
+    monkeypatch.setattr("src.ingest._create_pdf_reader", lambda uploaded_file: FakeReader())
+
+    uploaded_file = FakeUploadedFile(b"%PDF test bytes")
+
+    try:
+        load_pdf_file(uploaded_file)
+    except ValueError as error:
+        assert str(error) == "No readable text was found in this PDF."
+    else:
+        raise AssertionError("Expected load_pdf_file to raise ValueError.")
 
 
 def test_study_helpers_return_lists():

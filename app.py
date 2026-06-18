@@ -3,7 +3,7 @@
 
 import streamlit as st
 
-from src.ingest import load_txt_file
+from src.ingest import load_pdf_file, load_txt_file
 
 
 st.set_page_config(page_title="StudyMate")
@@ -31,22 +31,33 @@ flashcards_clicked = st.button("Generate flashcards")
 quiz_clicked = st.button("Generate quiz")
 
 if uploaded_file is not None:
-    if uploaded_file.name.lower().endswith(".txt"):
-        note_text = load_txt_file(uploaded_file)
+    file_name = uploaded_file.name
+    file_type = file_name.split(".")[-1].upper()
+    note_text = ""
 
-        st.success("TXT file loaded successfully.")
-        st.write(f"File name: {uploaded_file.name}")
-        st.write(f"Number of characters: {len(note_text)}")
+    try:
+        if file_name.lower().endswith(".txt"):
+            note_text = load_txt_file(uploaded_file)
+        elif file_name.lower().endswith(".pdf"):
+            note_text = load_pdf_file(uploaded_file)
+        else:
+            st.warning("Please upload a TXT or PDF file.")
 
-        # Show only the beginning so long lecture notes do not fill the page.
-        st.text_area(
-            "Preview of your notes",
-            value=note_text[:1000],
-            height=250,
-            disabled=True,
-        )
-    else:
-        st.info("PDF support will be added later. For now, please try a TXT file.")
+        if note_text:
+            st.success("File loaded successfully.")
+            st.write(f"File name: {file_name}")
+            st.write(f"Detected file type: {file_type}")
+            st.write(f"Number of characters extracted: {len(note_text)}")
+
+            # Show only the beginning so long lecture notes do not fill the page.
+            st.text_area(
+                "Preview of your notes",
+                value=note_text[:1000],
+                height=250,
+                disabled=True,
+            )
+    except ValueError as error:
+        st.error(str(error))
 
 if ask_clicked:
     st.info("AI question answering will be added next.")
