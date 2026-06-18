@@ -1,5 +1,7 @@
 # StudyMate Streamlit entry point.
-# This file is the first simple version of the web app.
+# This file contains the main beginner-friendly web app.
+
+import hashlib
 
 from dotenv import load_dotenv
 import streamlit as st
@@ -44,6 +46,13 @@ def clear_uploaded_notes_state():
     """Remove old note data when a new upload cannot be prepared."""
     st.session_state.pop("vector_store", None)
     st.session_state.pop("uploaded_file_key", None)
+
+
+def make_uploaded_file_key(file_name, note_text):
+    """Create a simple key so new notes get a new vector store."""
+    text_hash = hashlib.sha256(note_text.encode("utf-8")).hexdigest()
+
+    return f"{file_name}-{text_hash}"
 
 
 st.sidebar.title("How to use StudyMate")
@@ -130,7 +139,7 @@ else:
             )
 
             if chunks:
-                file_key = f"{file_name}-{len(note_text)}"
+                file_key = make_uploaded_file_key(file_name, note_text)
 
                 if st.session_state.get("uploaded_file_key") != file_key:
                     clear_uploaded_notes_state()

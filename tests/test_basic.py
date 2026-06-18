@@ -8,7 +8,6 @@ from src.ingest import (
     create_vector_store,
     load_pdf_file,
     load_txt_file,
-    split_text,
     split_text_into_chunks,
 )
 from src.quiz_generator import (
@@ -16,7 +15,6 @@ from src.quiz_generator import (
     QUIZ_NOT_FOUND,
     generate_exam_mode_questions,
     generate_quiz,
-    generate_quiz_questions,
 )
 from src.rag_chain import ANSWER_NOT_FOUND, answer_question
 
@@ -103,13 +101,6 @@ def test_project_files_exist():
 
     for file_path in expected_files:
         assert Path(file_path).exists()
-
-
-def test_split_text_creates_chunks():
-    """Check that long text is split into smaller pieces."""
-    chunks = split_text("abcdef", chunk_size=2)
-
-    assert chunks == ["ab", "cd", "ef"]
 
 
 def test_load_txt_file_reads_uploaded_text():
@@ -557,8 +548,3 @@ def test_generate_exam_mode_questions_handles_vector_store_errors():
         assert "Could not search your uploaded notes for Exam Mode" in str(error)
     else:
         raise AssertionError("Expected generate_exam_mode_questions to raise ValueError.")
-
-
-def test_study_helpers_return_lists():
-    """Check that starter quiz helpers return lists."""
-    assert isinstance(generate_quiz_questions("Photosynthesis notes"), list)

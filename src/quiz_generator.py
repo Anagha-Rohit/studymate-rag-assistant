@@ -70,9 +70,15 @@ Return only valid JSON in this format:
 
 def _create_chat_model():
     """Create the OpenAI chat model used for quiz generation."""
-    from langchain_openai import ChatOpenAI
-
     require_openai_api_key()
+
+    try:
+        from langchain_openai import ChatOpenAI
+    except ImportError as error:
+        raise ValueError(
+            "The LangChain OpenAI package is missing. Run "
+            "`pip install -r requirements.txt`, then restart Streamlit."
+        ) from error
 
     return ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -229,14 +235,3 @@ def generate_exam_mode_questions(vector_store, topic=None, number=10) -> list[di
                 "model_answer": response.content,
             }
         ]
-
-
-def generate_quiz_questions(text: str) -> list[str]:
-    """Return simple starter quiz questions."""
-    if not text.strip():
-        return []
-
-    return [
-        "What is the main idea of these notes?",
-        "What are two important details from these notes?",
-    ]

@@ -29,9 +29,15 @@ Answer:
 
 def _create_chat_model():
     """Create the OpenAI chat model used for answering questions."""
-    from langchain_openai import ChatOpenAI
-
     require_openai_api_key()
+
+    try:
+        from langchain_openai import ChatOpenAI
+    except ImportError as error:
+        raise ValueError(
+            "The LangChain OpenAI package is missing. Run "
+            "`pip install -r requirements.txt`, then restart Streamlit."
+        ) from error
 
     return ChatOpenAI(model="gpt-4o-mini", temperature=0)
 

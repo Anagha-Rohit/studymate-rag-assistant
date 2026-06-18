@@ -113,11 +113,7 @@ Create a `.env` file:
 cp .env.example .env
 ```
 
-Add your OpenAI API key to `.env`:
-
-```bash
-OPENAI_API_KEY=your_api_key_here
-```
+Open `.env` and replace `your_api_key_here` with your real OpenAI API key.
 
 Do not commit your `.env` file.
 

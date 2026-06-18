@@ -1,16 +1,6 @@
-"""Helpers for loading notes and preparing them for retrieval.
-
-Later this file will load PDF/TXT files, split text into chunks, create
-embeddings, and save everything in ChromaDB.
-"""
+"""Helpers for loading notes and preparing them for retrieval."""
 
 from src.config import require_openai_api_key
-
-
-def load_text_file(file_path: str) -> str:
-    """Read a plain text file and return its contents."""
-    with open(file_path, "r", encoding="utf-8") as file:
-        return file.read()
 
 
 def load_txt_file(uploaded_file) -> str:
@@ -37,7 +27,13 @@ def _create_pdf_reader(uploaded_file):
     The import stays inside this helper so the rest of the project can still be
     tested even before students install all optional packages.
     """
-    from pypdf import PdfReader
+    try:
+        from pypdf import PdfReader
+    except ImportError as error:
+        raise ValueError(
+            "The PDF package is missing. Run `pip install -r requirements.txt`, "
+            "then restart Streamlit."
+        ) from error
 
     return PdfReader(uploaded_file)
 
@@ -60,6 +56,8 @@ def load_pdf_file(uploaded_file) -> str:
 
             if page_text:
                 page_texts.append(page_text)
+    except ValueError:
+        raise
     except Exception as error:
         raise ValueError("Could not read this PDF file.") from error
 
@@ -102,16 +100,28 @@ def split_text_into_chunks(text: str) -> list[str]:
 
 def _create_openai_embeddings():
     """Create the OpenAI embedding model used by LangChain."""
-    from langchain_openai import OpenAIEmbeddings
-
     require_openai_api_key()
+
+    try:
+        from langchain_openai import OpenAIEmbeddings
+    except ImportError as error:
+        raise ValueError(
+            "The LangChain OpenAI package is missing. Run "
+            "`pip install -r requirements.txt`, then restart Streamlit."
+        ) from error
 
     return OpenAIEmbeddings()
 
 
 def _create_chroma_vector_store(chunks: list[str], metadata: list[dict], embeddings):
     """Create a Chroma vector store from text chunks and metadata."""
-    from langchain_chroma import Chroma
+    try:
+        from langchain_chroma import Chroma
+    except ImportError as error:
+        raise ValueError(
+            "The Chroma package is missing. Run `pip install -r requirements.txt`, "
+            "then restart Streamlit."
+        ) from error
 
     return Chroma.from_texts(
         texts=chunks,
@@ -148,12 +158,3 @@ def create_vector_store(chunks: list[str]):
             "Could not create the vector store. Check your OpenAI API key and "
             "try uploading the notes again."
         ) from error
-
-
-def split_text(text: str, chunk_size: int = 500) -> list[str]:
-    """Split text into simple chunks.
-
-    This starter version splits by character count. Later we can replace it
-    with a LangChain text splitter.
-    """
-    return [text[index : index + chunk_size] for index in range(0, len(text), chunk_size)]
