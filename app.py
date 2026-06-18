@@ -10,6 +10,7 @@ from src.ingest import (
     load_txt_file,
     split_text_into_chunks,
 )
+from src.rag_chain import answer_question
 
 
 load_dotenv()
@@ -88,7 +89,32 @@ if uploaded_file is not None:
         )
 
 if ask_clicked:
-    st.info("AI question answering will be added next.")
+    if "vector_store" not in st.session_state:
+        st.warning("Please upload a TXT or PDF file first.")
+    elif not question.strip():
+        st.warning("Please type a question first.")
+    else:
+        try:
+            result = answer_question(st.session_state["vector_store"], question)
+
+            st.subheader("Answer")
+            st.write(result["answer"])
+
+            source_chunks = result["source_chunks"]
+
+            if source_chunks:
+                st.subheader("Source chunks")
+
+                for index, source_chunk in enumerate(source_chunks, start=1):
+                    chunk_number = source_chunk["chunk_number"]
+
+                    with st.expander(f"Source {index}: chunk {chunk_number}"):
+                        st.write(source_chunk["text"])
+        except Exception:
+            st.error(
+                "Could not answer the question. Check that OPENAI_API_KEY is set "
+                "in your .env file."
+            )
 
 if flashcards_clicked:
     st.info("AI flashcard generation will be added next.")

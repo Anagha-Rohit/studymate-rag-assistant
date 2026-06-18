@@ -11,6 +11,7 @@ from src.ingest import (
     split_text_into_chunks,
 )
 from src.quiz_generator import generate_quiz_questions
+from src.rag_chain import ANSWER_NOT_FOUND, answer_question
 
 
 class FakeUploadedFile:
@@ -21,6 +22,14 @@ class FakeUploadedFile:
 
     def getvalue(self) -> bytes:
         return self._file_bytes
+
+
+class FakeDocument:
+    """Small test helper that acts like a LangChain Document."""
+
+    def __init__(self, page_content: str, metadata: dict):
+        self.page_content = page_content
+        self.metadata = metadata
 
 
 def test_project_files_exist():
@@ -146,6 +155,52 @@ def test_create_vector_store_rejects_empty_chunks():
         assert str(error) == "No text chunks were provided for the vector store."
     else:
         raise AssertionError("Expected create_vector_store to raise ValueError.")
+
+
+def test_answer_question_uses_retrieved_notes(monkeypatch):
+    """Check that questions are answered from retrieved source chunks."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            saved_inputs["k"] = k
+
+            return [
+                FakeDocument("Photosynthesis uses sunlight.", {"chunk_number": 1}),
+                FakeDocument("Plants make glucose.", {"chunk_number": 2}),
+            ]
+
+    class FakeResponse:
+        content = "Photosynthesis uses sunlight to help plants make glucose."
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            saved_inputs["messages"] = messages
+            return FakeResponse()
+
+    monkeypatch.setattr("src.rag_chain._create_chat_model", lambda: FakeChatModel())
+
+    result = answer_question(FakeVectorStore(), "What does photosynthesis use?")
+
+    assert result["answer"] == "Photosynthesis uses sunlight to help plants make glucose."
+    assert result["source_chunks"][0]["chunk_number"] == 1
+    assert result["source_chunks"][0]["text"] == "Photosynthesis uses sunlight."
+    assert saved_inputs["question"] == "What does photosynthesis use?"
+    assert saved_inputs["k"] == 4
+    assert "Do not use outside knowledge" in saved_inputs["messages"][1][1]
+
+
+def test_answer_question_handles_no_retrieved_notes():
+    """Check that StudyMate gives a clear answer when no notes match."""
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            return []
+
+    result = answer_question(FakeVectorStore(), "What is mitosis?")
+
+    assert result == {"answer": ANSWER_NOT_FOUND, "source_chunks": []}
 
 
 def test_study_helpers_return_lists():
