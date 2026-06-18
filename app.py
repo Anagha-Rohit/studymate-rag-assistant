@@ -17,6 +17,30 @@ load_dotenv()
 
 st.set_page_config(page_title="StudyMate")
 
+
+def show_pipeline_status(file_uploaded, text_extracted, chunks_created, vector_store_ready):
+    """Show the current progress through the StudyMate RAG pipeline."""
+    st.subheader("Pipeline status")
+
+    steps = [
+        ("1. File uploaded", file_uploaded),
+        ("2. Text extracted", text_extracted),
+        ("3. Chunks created", chunks_created),
+        ("4. Vector store ready", vector_store_ready),
+    ]
+
+    for label, is_done in steps:
+        status = "Done" if is_done else "Waiting"
+        st.write(f"{label}: {status}")
+
+
+st.sidebar.title("How to use StudyMate")
+st.sidebar.write("1. Upload a TXT or PDF file with your lecture notes.")
+st.sidebar.write("2. Wait for StudyMate to extract and prepare the text.")
+st.sidebar.write("3. Ask a question about the uploaded notes.")
+st.sidebar.write("4. Check the source chunks used for the answer.")
+st.sidebar.info("Your API key stays in your `.env` file and is not shown in the app.")
+
 st.title("StudyMate: AI Revision Assistant")
 
 st.write(
@@ -31,6 +55,11 @@ uploaded_file = st.file_uploader(
     type=["pdf", "txt"],
 )
 
+file_uploaded = uploaded_file is not None
+text_extracted = False
+chunks_created = False
+vector_store_ready = False
+
 # This will later be sent to the RAG system.
 question = st.text_area("Ask a question about your notes")
 
@@ -39,7 +68,9 @@ ask_clicked = st.button("Ask question")
 flashcards_clicked = st.button("Generate flashcards")
 quiz_clicked = st.button("Generate quiz")
 
-if uploaded_file is not None:
+if uploaded_file is None:
+    st.info("No file uploaded yet. Upload a TXT or PDF file to begin.")
+else:
     file_name = uploaded_file.name
     file_type = file_name.split(".")[-1].upper()
     note_text = ""
@@ -52,8 +83,14 @@ if uploaded_file is not None:
         else:
             st.warning("Please upload a TXT or PDF file.")
 
-        if note_text:
+        if not note_text.strip():
+            st.session_state.pop("vector_store", None)
+            st.session_state.pop("uploaded_file_key", None)
+            st.error("This file has no readable text. Try another TXT or PDF file.")
+        else:
+            text_extracted = True
             chunks = split_text_into_chunks(note_text)
+            chunks_created = len(chunks) > 0
 
             st.success("File loaded successfully.")
             st.write(f"File name: {file_name}")
@@ -73,26 +110,40 @@ if uploaded_file is not None:
                 file_key = f"{file_name}-{len(note_text)}"
 
                 if st.session_state.get("uploaded_file_key") != file_key:
+                    st.session_state.pop("vector_store", None)
                     st.session_state["vector_store"] = create_vector_store(chunks)
                     st.session_state["uploaded_file_key"] = file_key
 
+                vector_store_ready = st.session_state.get("uploaded_file_key") == file_key
                 st.success("Vector store is ready for questions.")
 
                 with st.expander("Show first chunk"):
                     st.write(chunks[0])
+            else:
+                st.session_state.pop("vector_store", None)
+                st.session_state.pop("uploaded_file_key", None)
+                st.error("No chunks were created from this file. Try a file with more text.")
     except ValueError as error:
+        st.session_state.pop("vector_store", None)
+        st.session_state.pop("uploaded_file_key", None)
         st.error(str(error))
     except Exception:
+        st.session_state.pop("vector_store", None)
+        st.session_state.pop("uploaded_file_key", None)
         st.error(
             "Could not create the vector store. Check that OPENAI_API_KEY is set "
             "in your .env file."
         )
 
+show_pipeline_status(file_uploaded, text_extracted, chunks_created, vector_store_ready)
+
 if ask_clicked:
-    if "vector_store" not in st.session_state:
-        st.warning("Please upload a TXT or PDF file first.")
+    if uploaded_file is None:
+        st.error("Please upload notes before asking a question.")
+    elif "vector_store" not in st.session_state:
+        st.error("Your notes are not ready yet. Check the upload and vector store status.")
     elif not question.strip():
-        st.warning("Please type a question first.")
+        st.error("Please type a question before clicking Ask question.")
     else:
         try:
             result = answer_question(st.session_state["vector_store"], question)
