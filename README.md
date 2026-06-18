@@ -4,23 +4,13 @@ StudyMate is a LangChain + Streamlit RAG application that helps students study f
 
 The project is designed to be beginner-friendly while still showing a real end-to-end AI workflow: document loading, chunking, embeddings, vector search, retrieval, and grounded answer generation.
 
-## Demo Screenshot Placeholders
-
-Add screenshots after running the app locally. Take these four screenshots:
-
-1. Homepage with uploaded notes
+## Screenshots
 
 ![StudyMate homepage](docs/screenshots/homepage.png)
 
-2. Question-answering result with source chunks
-
 ![StudyMate question answering](docs/screenshots/question-answering.png)
 
-3. Flashcard generation
-
 ![StudyMate flashcards](docs/screenshots/flashcards.png)
-
-4. Exam mode questions
 
 ![StudyMate exam mode](docs/screenshots/exam-mode.png)
 
