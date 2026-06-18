@@ -6,12 +6,23 @@ The project is designed to be beginner-friendly while still showing a real end-t
 
 ## Demo Screenshot Placeholders
 
-Add screenshots here after running the app locally:
+Add screenshots after running the app locally. Take these four screenshots:
 
-- `screenshots/upload-notes.png` - Upload and document processing screen
-- `screenshots/ask-question.png` - Question answering with source chunks
-- `screenshots/flashcards.png` - Flashcard generation
-- `screenshots/exam-mode.png` - Exam Mode with hidden model answers
+1. Homepage with uploaded notes
+
+![StudyMate homepage](docs/screenshots/homepage.png)
+
+2. Question-answering result with source chunks
+
+![StudyMate question answering](docs/screenshots/question-answering.png)
+
+3. Flashcard generation
+
+![StudyMate flashcards](docs/screenshots/flashcards.png)
+
+4. Exam mode questions
+
+![StudyMate exam mode](docs/screenshots/exam-mode.png)
 
 ## Features
 
