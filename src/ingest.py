@@ -11,6 +11,21 @@ def load_text_file(file_path: str) -> str:
         return file.read()
 
 
+def load_txt_file(uploaded_file) -> str:
+    """Read a TXT file uploaded with Streamlit and return its text.
+
+    Streamlit gives uploaded files as bytes. We try to decode those bytes as
+    UTF-8. If the file has a few unusual characters, we replace them instead of
+    crashing the app.
+    """
+    file_bytes = uploaded_file.getvalue()
+
+    try:
+        return file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return file_bytes.decode("utf-8", errors="replace")
+
+
 def split_text(text: str, chunk_size: int = 500) -> list[str]:
     """Split text into simple chunks.
 

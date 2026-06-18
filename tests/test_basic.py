@@ -3,8 +3,18 @@
 from pathlib import Path
 
 from src.flashcards import generate_flashcards
-from src.ingest import split_text
+from src.ingest import load_txt_file, split_text
 from src.quiz_generator import generate_quiz_questions
+
+
+class FakeUploadedFile:
+    """Small test helper that acts like a Streamlit uploaded file."""
+
+    def __init__(self, file_bytes: bytes):
+        self._file_bytes = file_bytes
+
+    def getvalue(self) -> bytes:
+        return self._file_bytes
 
 
 def test_project_files_exist():
@@ -32,6 +42,23 @@ def test_split_text_creates_chunks():
     chunks = split_text("abcdef", chunk_size=2)
 
     assert chunks == ["ab", "cd", "ef"]
+
+
+def test_load_txt_file_reads_uploaded_text():
+    """Check that uploaded TXT bytes become a normal Python string."""
+    uploaded_file = FakeUploadedFile("Hello, StudyMate!".encode("utf-8"))
+
+    assert load_txt_file(uploaded_file) == "Hello, StudyMate!"
+
+
+def test_load_txt_file_handles_decoding_errors():
+    """Check that unusual bytes do not crash the TXT loader."""
+    uploaded_file = FakeUploadedFile(b"Hello\xffStudyMate")
+
+    text = load_txt_file(uploaded_file)
+
+    assert "Hello" in text
+    assert "StudyMate" in text
 
 
 def test_study_helpers_return_lists():

@@ -3,6 +3,8 @@
 
 import streamlit as st
 
+from src.ingest import load_txt_file
+
 
 st.set_page_config(page_title="StudyMate")
 
@@ -29,7 +31,22 @@ flashcards_clicked = st.button("Generate flashcards")
 quiz_clicked = st.button("Generate quiz")
 
 if uploaded_file is not None:
-    st.success("Your file has been uploaded. Note processing will be added next.")
+    if uploaded_file.name.lower().endswith(".txt"):
+        note_text = load_txt_file(uploaded_file)
+
+        st.success("TXT file loaded successfully.")
+        st.write(f"File name: {uploaded_file.name}")
+        st.write(f"Number of characters: {len(note_text)}")
+
+        # Show only the beginning so long lecture notes do not fill the page.
+        st.text_area(
+            "Preview of your notes",
+            value=note_text[:1000],
+            height=250,
+            disabled=True,
+        )
+    else:
+        st.info("PDF support will be added later. For now, please try a TXT file.")
 
 if ask_clicked:
     st.info("AI question answering will be added next.")
