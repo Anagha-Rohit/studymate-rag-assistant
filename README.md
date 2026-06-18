@@ -8,6 +8,8 @@ The project is designed to be beginner-friendly while still showing a real end-t
 
 ![StudyMate app screenshot](docs/screenshots/studymate-demo.png)
 
+![StudyMate second app screenshot](docs/screenshots/studymate-demo2.png)
+
 ## Features
 
 - Upload lecture notes as PDF or TXT files
