@@ -6,13 +6,7 @@ The project is designed to be beginner-friendly while still showing a real end-t
 
 ## Screenshots
 
-![StudyMate homepage](docs/screenshots/homepage.png)
-
-![StudyMate question answering](docs/screenshots/question-answering.png)
-
-![StudyMate flashcards](docs/screenshots/flashcards.png)
-
-![StudyMate exam mode](docs/screenshots/exam-mode.png)
+![StudyMate app screenshot](docs/screenshots/studymate-demo.png)
 
 ## Features
 
