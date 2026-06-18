@@ -1,8 +1,32 @@
 # StudyMate
 
 StudyMate is a beginner-friendly Python project for a first-year university student.
+It is planned as a Streamlit study assistant that uses LangChain, ChromaDB, and
+retrieval-augmented generation to answer questions from uploaded lecture notes.
 
-The goal is to build a LangChain + Streamlit RAG app that helps students study from their own lecture notes.
+The project is intentionally built in small steps so each part of the RAG
+workflow is easy to understand.
+
+## Project Overview
+
+StudyMate will let a student upload notes, split the notes into chunks, store
+those chunks in a vector database, and ask questions about the material. The app
+should answer from the uploaded notes and show the source chunks used, so the
+student can check where the answer came from.
+
+Later, StudyMate will also help students create flashcards and practice quiz
+questions from their notes.
+
+## Learning Goals
+
+- Learn how a Streamlit app is organized.
+- Learn how text can be loaded from PDF and TXT files.
+- Learn why long notes need to be split into chunks.
+- Learn what embeddings are and how they help with search.
+- Learn how ChromaDB stores and retrieves note chunks.
+- Learn how LangChain can connect retrieval with a language model.
+- Learn how to show sources so answers can be checked.
+- Learn how to keep API keys safe with environment variables.
 
 ## Planned Features
 
