@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.flashcards import generate_flashcards
+from src.flashcards import FLASHCARD_NOT_FOUND, generate_flashcards
 from src.ingest import (
     create_vector_store,
     load_pdf_file,
@@ -203,7 +203,75 @@ def test_answer_question_handles_no_retrieved_notes():
     assert result == {"answer": ANSWER_NOT_FOUND, "source_chunks": []}
 
 
+def test_generate_flashcards_uses_retrieved_notes(monkeypatch):
+    """Check that flashcards are generated from retrieved source chunks."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            saved_inputs["k"] = k
+
+            return [
+                FakeDocument("A variable stores a value.", {"chunk_number": 1}),
+                FakeDocument("A loop repeats code.", {"chunk_number": 2}),
+            ]
+
+    class FakeResponse:
+        content = "Question: What does a variable do?\nAnswer: It stores a value."
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            saved_inputs["messages"] = messages
+            return FakeResponse()
+
+    monkeypatch.setattr("src.flashcards._create_chat_model", lambda: FakeChatModel())
+
+    flashcards = generate_flashcards(FakeVectorStore(), topic="variables", number=3)
+
+    assert "Question: What does a variable do?" in flashcards
+    assert "Answer: It stores a value." in flashcards
+    assert saved_inputs["question"] == "variables"
+    assert saved_inputs["k"] == 3
+    assert "Do not use outside knowledge" in saved_inputs["messages"][1][1]
+
+
+def test_generate_flashcards_uses_general_notes_without_topic(monkeypatch):
+    """Check that flashcards can be generated without a topic."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            return [FakeDocument("Algorithms solve problems.", {"chunk_number": 1})]
+
+    class FakeResponse:
+        content = "Question: What do algorithms do?\nAnswer: They solve problems."
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            return FakeResponse()
+
+    monkeypatch.setattr("src.flashcards._create_chat_model", lambda: FakeChatModel())
+
+    flashcards = generate_flashcards(FakeVectorStore())
+
+    assert "Question:" in flashcards
+    assert saved_inputs["question"] == "important ideas from these notes"
+
+
+def test_generate_flashcards_handles_no_retrieved_notes():
+    """Check that StudyMate gives a clear message if no notes are retrieved."""
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            return []
+
+    flashcards = generate_flashcards(FakeVectorStore(), topic="biology")
+
+    assert flashcards == FLASHCARD_NOT_FOUND
+
+
 def test_study_helpers_return_lists():
-    """Check that starter quiz and flashcard helpers return lists."""
+    """Check that starter quiz helpers return lists."""
     assert isinstance(generate_quiz_questions("Photosynthesis notes"), list)
-    assert isinstance(generate_flashcards("Photosynthesis notes"), list)

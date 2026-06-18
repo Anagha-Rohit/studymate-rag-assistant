@@ -1,17 +1,82 @@
 """Flashcard generation helpers for StudyMate.
 
-Later this file will create question-and-answer flashcards from lecture notes.
+This file creates question-and-answer flashcards from uploaded lecture notes.
 """
 
+FLASHCARD_NOT_FOUND = "The notes do not contain enough information to make flashcards."
 
-def generate_flashcards(text: str) -> list[dict[str, str]]:
-    """Return a simple starter flashcard."""
-    if not text.strip():
-        return []
 
-    return [
-        {
-            "front": "What topic do these notes discuss?",
-            "back": "Review the notes and write the main topic in your own words.",
-        }
-    ]
+FLASHCARD_PROMPT_TEMPLATE = """
+You are StudyMate, a helpful revision assistant for university students.
+
+Create {number} flashcards using only the retrieved notes below.
+Do not use outside knowledge.
+If the notes do not contain enough information, say exactly:
+"The notes do not contain enough information to make flashcards."
+
+Topic:
+{topic}
+
+Retrieved notes:
+{context}
+
+Format each flashcard like this:
+Question: ...
+Answer: ...
+""".strip()
+
+
+def _create_chat_model():
+    """Create the OpenAI chat model used for flashcard generation."""
+    from langchain_openai import ChatOpenAI
+
+    return ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+
+def _get_page_content(document) -> str:
+    """Get text from a LangChain Document."""
+    return getattr(document, "page_content", "")
+
+
+def _format_documents_for_prompt(documents) -> str:
+    """Turn retrieved documents into text for the flashcard prompt."""
+    prompt_parts = []
+
+    for index, document in enumerate(documents, start=1):
+        chunk_text = _get_page_content(document)
+        prompt_parts.append(f"Source chunk {index}:\n{chunk_text}")
+
+    return "\n\n".join(prompt_parts)
+
+
+def generate_flashcards(vector_store, topic=None, number=5) -> str:
+    """Generate flashcards using only chunks from the vector store."""
+    topic_text = topic.strip() if topic else ""
+    search_query = topic_text or "important ideas from these notes"
+    number = max(1, int(number))
+
+    # Retrieve note chunks first so the model only sees relevant course notes.
+    retrieved_documents = vector_store.similarity_search(search_query, k=number)
+
+    if not retrieved_documents:
+        return FLASHCARD_NOT_FOUND
+
+    context = _format_documents_for_prompt(retrieved_documents)
+    prompt = FLASHCARD_PROMPT_TEMPLATE.format(
+        number=number,
+        topic=topic_text or "General notes",
+        context=context,
+    )
+
+    chat_model = _create_chat_model()
+    response = chat_model.invoke(
+        [
+            (
+                "system",
+                "You create flashcards using only the provided study notes.",
+            ),
+            ("human", prompt),
+        ]
+    )
+
+    return response.content

@@ -4,6 +4,7 @@
 from dotenv import load_dotenv
 import streamlit as st
 
+from src.flashcards import generate_flashcards
 from src.ingest import (
     create_vector_store,
     load_pdf_file,
@@ -62,6 +63,7 @@ vector_store_ready = False
 
 # This will later be sent to the RAG system.
 question = st.text_area("Ask a question about your notes")
+flashcard_topic = st.text_input("Optional flashcard topic")
 
 # These buttons are placeholders for features we will build next.
 ask_clicked = st.button("Ask question")
@@ -168,7 +170,31 @@ if ask_clicked:
             )
 
 if flashcards_clicked:
-    st.info("AI flashcard generation will be added next.")
+    if uploaded_file is None:
+        st.error("Please upload notes before generating flashcards.")
+    elif "vector_store" not in st.session_state:
+        st.error("Your notes are not ready yet. Check the upload and vector store status.")
+    else:
+        try:
+            flashcards = generate_flashcards(
+                st.session_state["vector_store"],
+                topic=flashcard_topic,
+                number=5,
+            )
+
+            st.subheader("Flashcards")
+
+            if flashcard_topic.strip():
+                st.write(f"Topic: {flashcard_topic}")
+            else:
+                st.write("Topic: General notes")
+
+            st.text(flashcards)
+        except Exception:
+            st.error(
+                "Could not generate flashcards. Check that OPENAI_API_KEY is set "
+                "in your .env file."
+            )
 
 if quiz_clicked:
     st.info("AI quiz generation will be added next.")
