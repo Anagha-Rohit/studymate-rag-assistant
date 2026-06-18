@@ -11,6 +11,7 @@ from src.ingest import (
     load_txt_file,
     split_text_into_chunks,
 )
+from src.quiz_generator import generate_quiz
 from src.rag_chain import answer_question
 
 
@@ -64,6 +65,7 @@ vector_store_ready = False
 # This will later be sent to the RAG system.
 question = st.text_area("Ask a question about your notes")
 flashcard_topic = st.text_input("Optional flashcard topic")
+quiz_topic = st.text_input("Optional quiz topic")
 
 # These buttons are placeholders for features we will build next.
 ask_clicked = st.button("Ask question")
@@ -197,7 +199,31 @@ if flashcards_clicked:
             )
 
 if quiz_clicked:
-    st.info("AI quiz generation will be added next.")
+    if uploaded_file is None:
+        st.error("Please upload notes before generating a quiz.")
+    elif "vector_store" not in st.session_state:
+        st.error("Your notes are not ready yet. Check the upload and vector store status.")
+    else:
+        try:
+            quiz = generate_quiz(
+                st.session_state["vector_store"],
+                topic=quiz_topic,
+                number=5,
+            )
+
+            st.subheader("Quiz")
+
+            if quiz_topic.strip():
+                st.write(f"Topic: {quiz_topic}")
+            else:
+                st.write("Topic: General notes")
+
+            st.text(quiz)
+        except Exception:
+            st.error(
+                "Could not generate the quiz. Check that OPENAI_API_KEY is set "
+                "in your .env file."
+            )
 
 st.write(
     "Friendly note: the AI features are not connected yet. "

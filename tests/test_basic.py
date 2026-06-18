@@ -10,7 +10,7 @@ from src.ingest import (
     split_text,
     split_text_into_chunks,
 )
-from src.quiz_generator import generate_quiz_questions
+from src.quiz_generator import QUIZ_NOT_FOUND, generate_quiz, generate_quiz_questions
 from src.rag_chain import ANSWER_NOT_FOUND, answer_question
 
 
@@ -270,6 +270,84 @@ def test_generate_flashcards_handles_no_retrieved_notes():
     flashcards = generate_flashcards(FakeVectorStore(), topic="biology")
 
     assert flashcards == FLASHCARD_NOT_FOUND
+
+
+def test_generate_quiz_uses_retrieved_notes(monkeypatch):
+    """Check that quiz questions are generated from retrieved source chunks."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            saved_inputs["k"] = k
+
+            return [
+                FakeDocument("A function is a reusable block of code.", {"chunk_number": 1}),
+                FakeDocument("A parameter is an input to a function.", {"chunk_number": 2}),
+            ]
+
+    class FakeResponse:
+        content = (
+            "1. [Multiple choice] What is a function?\n"
+            "   A. A reusable block of code\n"
+            "   B. A database\n\n"
+            "2. [Short answer] What is a parameter?\n\n"
+            "Answers:\n"
+            "1. A\n"
+            "2. An input to a function."
+        )
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            saved_inputs["messages"] = messages
+            return FakeResponse()
+
+    monkeypatch.setattr("src.quiz_generator._create_chat_model", lambda: FakeChatModel())
+
+    quiz = generate_quiz(FakeVectorStore(), topic="functions", number=4)
+
+    assert "[Multiple choice]" in quiz
+    assert "[Short answer]" in quiz
+    assert "Answers:" in quiz
+    assert saved_inputs["question"] == "functions"
+    assert saved_inputs["k"] == 4
+    assert "Do not use outside knowledge" in saved_inputs["messages"][1][1]
+
+
+def test_generate_quiz_uses_general_notes_without_topic(monkeypatch):
+    """Check that a quiz can be generated without a topic."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            return [FakeDocument("Data can be stored in lists.", {"chunk_number": 1})]
+
+    class FakeResponse:
+        content = "1. [Short answer] What can store data?\n\nAnswers:\n1. Lists."
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            return FakeResponse()
+
+    monkeypatch.setattr("src.quiz_generator._create_chat_model", lambda: FakeChatModel())
+
+    quiz = generate_quiz(FakeVectorStore())
+
+    assert "Answers:" in quiz
+    assert saved_inputs["question"] == "important ideas from these notes"
+
+
+def test_generate_quiz_handles_no_retrieved_notes():
+    """Check that StudyMate gives a clear message if no quiz notes are found."""
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            return []
+
+    quiz = generate_quiz(FakeVectorStore(), topic="chemistry")
+
+    assert quiz == QUIZ_NOT_FOUND
 
 
 def test_study_helpers_return_lists():
