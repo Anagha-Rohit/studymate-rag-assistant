@@ -10,7 +10,13 @@ from src.ingest import (
     split_text,
     split_text_into_chunks,
 )
-from src.quiz_generator import QUIZ_NOT_FOUND, generate_quiz, generate_quiz_questions
+from src.quiz_generator import (
+    EXAM_MODE_NOT_FOUND,
+    QUIZ_NOT_FOUND,
+    generate_exam_mode_questions,
+    generate_quiz,
+    generate_quiz_questions,
+)
 from src.rag_chain import ANSWER_NOT_FOUND, answer_question
 
 
@@ -348,6 +354,97 @@ def test_generate_quiz_handles_no_retrieved_notes():
     quiz = generate_quiz(FakeVectorStore(), topic="chemistry")
 
     assert quiz == QUIZ_NOT_FOUND
+
+
+def test_generate_exam_mode_questions_uses_retrieved_notes(monkeypatch):
+    """Check that Exam Mode creates questions and model answers from notes."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            saved_inputs["k"] = k
+
+            return [
+                FakeDocument("Algorithms solve problems step by step.", {"chunk_number": 1}),
+                FakeDocument("Debugging means finding and fixing errors.", {"chunk_number": 2}),
+            ]
+
+    class FakeResponse:
+        content = """
+        [
+          {
+            "question": "Explain how an algorithm can help solve a problem.",
+            "model_answer": "A good answer explains that an algorithm gives clear steps."
+          },
+          {
+            "question": "Why is debugging useful when writing programs?",
+            "model_answer": "Debugging helps find and fix errors in code."
+          }
+        ]
+        """
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            saved_inputs["messages"] = messages
+            return FakeResponse()
+
+    monkeypatch.setattr("src.quiz_generator._create_chat_model", lambda: FakeChatModel())
+
+    questions = generate_exam_mode_questions(FakeVectorStore(), topic="algorithms", number=6)
+
+    assert len(questions) == 2
+    assert questions[0]["question"] == "Explain how an algorithm can help solve a problem."
+    assert "clear steps" in questions[0]["model_answer"]
+    assert saved_inputs["question"] == "algorithms"
+    assert saved_inputs["k"] == 6
+    assert "Avoid questions that only ask for simple definitions" in saved_inputs["messages"][1][1]
+
+
+def test_generate_exam_mode_questions_uses_general_notes_without_topic(monkeypatch):
+    """Check that Exam Mode works without a topic."""
+    saved_inputs = {}
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            saved_inputs["question"] = question
+            saved_inputs["k"] = k
+            return [FakeDocument("Loops repeat instructions.", {"chunk_number": 1})]
+
+    class FakeResponse:
+        content = """
+        [
+          {
+            "question": "Explain why loops are useful in a program.",
+            "model_answer": "Loops are useful because they repeat instructions."
+          }
+        ]
+        """
+
+    class FakeChatModel:
+        def invoke(self, messages):
+            return FakeResponse()
+
+    monkeypatch.setattr("src.quiz_generator._create_chat_model", lambda: FakeChatModel())
+
+    questions = generate_exam_mode_questions(FakeVectorStore(), number=20)
+
+    assert questions[0]["question"].startswith("Explain why loops")
+    assert saved_inputs["question"] == "exam-style understanding questions from these notes"
+    assert saved_inputs["k"] == 10
+
+
+def test_generate_exam_mode_questions_handles_no_retrieved_notes():
+    """Check that Exam Mode returns no questions if no notes are retrieved."""
+
+    class FakeVectorStore:
+        def similarity_search(self, question, k):
+            return []
+
+    questions = generate_exam_mode_questions(FakeVectorStore(), topic="databases")
+
+    assert questions == []
+    assert EXAM_MODE_NOT_FOUND == "The notes do not contain enough information for exam mode."
 
 
 def test_study_helpers_return_lists():

@@ -11,7 +11,11 @@ from src.ingest import (
     load_txt_file,
     split_text_into_chunks,
 )
-from src.quiz_generator import generate_quiz
+from src.quiz_generator import (
+    EXAM_MODE_NOT_FOUND,
+    generate_exam_mode_questions,
+    generate_quiz,
+)
 from src.rag_chain import answer_question
 
 
@@ -62,15 +66,25 @@ text_extracted = False
 chunks_created = False
 vector_store_ready = False
 
-# This will later be sent to the RAG system.
+# These inputs are used by the RAG, flashcard, quiz, and Exam Mode features.
 question = st.text_area("Ask a question about your notes")
 flashcard_topic = st.text_input("Optional flashcard topic")
 quiz_topic = st.text_input("Optional quiz topic")
 
-# These buttons are placeholders for features we will build next.
+st.subheader("Exam Mode")
+exam_topic = st.text_input("Optional exam topic")
+exam_question_count = st.slider(
+    "Number of exam questions",
+    min_value=3,
+    max_value=10,
+    value=10,
+)
+
+# These buttons run the main StudyMate study features.
 ask_clicked = st.button("Ask question")
 flashcards_clicked = st.button("Generate flashcards")
 quiz_clicked = st.button("Generate quiz")
+exam_mode_clicked = st.button("Generate exam mode questions")
 
 if uploaded_file is None:
     st.info("No file uploaded yet. Upload a TXT or PDF file to begin.")
@@ -225,7 +239,46 @@ if quiz_clicked:
                 "in your .env file."
             )
 
+if exam_mode_clicked:
+    if uploaded_file is None:
+        st.error("Please upload notes before using Exam Mode.")
+    elif "vector_store" not in st.session_state:
+        st.error("Your notes are not ready yet. Check the upload and vector store status.")
+    else:
+        try:
+            exam_questions = generate_exam_mode_questions(
+                st.session_state["vector_store"],
+                topic=exam_topic,
+                number=exam_question_count,
+            )
+
+            st.subheader("Exam Mode Questions")
+
+            if exam_topic.strip():
+                st.write(f"Topic: {exam_topic}")
+            else:
+                st.write("Topic: General notes")
+
+            if not exam_questions:
+                st.warning(EXAM_MODE_NOT_FOUND)
+            else:
+                st.write("Questions")
+
+                for index, exam_question in enumerate(exam_questions, start=1):
+                    st.write(f"{index}. {exam_question['question']}")
+
+                st.write("Model answers")
+
+                for index, exam_question in enumerate(exam_questions, start=1):
+                    with st.expander(f"Model answer {index}"):
+                        st.write(exam_question["model_answer"])
+        except Exception:
+            st.error(
+                "Could not generate Exam Mode questions. Check that OPENAI_API_KEY "
+                "is set in your .env file."
+            )
+
 st.write(
-    "Friendly note: the AI features are not connected yet. "
-    "They will be added in the next steps."
+    "Friendly note: StudyMate uses the notes you upload for answers, flashcards, "
+    "quizzes, and Exam Mode."
 )
