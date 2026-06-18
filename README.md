@@ -52,15 +52,39 @@ questions from their notes.
 
 ## Getting Started
 
-1. Create and activate a virtual environment.
-2. Install the requirements:
+1. Create a virtual environment:
+
+```bash
+python3 -m venv .venv
+```
+
+2. Activate the virtual environment:
+
+```bash
+source .venv/bin/activate
+```
+
+3. Install the requirements:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Copy `.env.example` to `.env` and add your own API key later.
-4. Run the starter app:
+4. Create a `.env` file from the example file:
+
+```bash
+cp .env.example .env
+```
+
+5. Add your OpenAI API key to `.env`:
+
+```bash
+OPENAI_API_KEY=your_api_key_here
+```
+
+Replace `your_api_key_here` with your own key. Do not commit your `.env` file.
+
+6. Run the app:
 
 ```bash
 streamlit run app.py

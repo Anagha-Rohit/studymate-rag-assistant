@@ -1,11 +1,25 @@
 # Python packages needed for StudyMate.
 # Install them with: pip install -r requirements.txt
 
+# Streamlit web app
 streamlit
+
+# LangChain core RAG tools
 langchain
 langchain-community
+
+# OpenAI chat models and embeddings for LangChain
 langchain-openai
+
+# Chroma vector store for LangChain
+langchain-chroma
 chromadb
+
+# PDF loading
 pypdf
+
+# Environment variables
 python-dotenv
+
+# Testing
 pytest
