@@ -1,0 +1,11 @@
+# Sample Lecture Notes
+
+Topic: Introduction to Computer Science
+
+Computer science is the study of computers, algorithms, and data.
+
+An algorithm is a step-by-step method for solving a problem.
+
+Programs are written in programming languages so computers can follow instructions.
+
+Study tip: After each lecture, summarize the main idea in your own words.

@@ -1,0 +1,11 @@
+# Python packages needed for StudyMate.
+# Install them with: pip install -r requirements.txt
+
+streamlit
+langchain
+langchain-community
+langchain-openai
+chromadb
+pypdf
+python-dotenv
+pytest

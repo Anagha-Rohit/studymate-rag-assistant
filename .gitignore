@@ -1,0 +1,9 @@
+# Files and folders that should not be committed to git.
+
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+chroma_db/
+.streamlit/secrets.toml
