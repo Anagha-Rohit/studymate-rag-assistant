@@ -90,6 +90,15 @@ Replace `your_api_key_here` with your own key. Do not commit your `.env` file.
 streamlit run app.py
 ```
 
+## Example Questions
+
+After uploading `sample_data/sample_notes.txt`, try prompts like:
+
+- Explain binary search in simple terms
+- Make me 5 flashcards about Big O notation
+- Create an exam quiz about recursion
+- What are the key differences between arrays and linked lists?
+
 ## Running Tests
 
 StudyMate uses `pytest` for simple project tests.

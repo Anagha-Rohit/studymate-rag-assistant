@@ -1,11 +1,41 @@
-# Sample Lecture Notes
+# Sample First-Year Computer Science Notes
 
-Topic: Introduction to Computer Science
+## Binary Search
 
-Computer science is the study of computers, algorithms, and data.
+Binary search is an efficient algorithm for finding an item in a sorted list.
+It checks the middle item first. If the target is smaller, it searches the left
+half. If the target is larger, it searches the right half. Each step cuts the
+search area in half.
 
-An algorithm is a step-by-step method for solving a problem.
+Binary search only works correctly when the data is sorted. Its time complexity
+is O(log n), which means it stays fast even when the list becomes large.
 
-Programs are written in programming languages so computers can follow instructions.
+## Big O Notation
 
-Study tip: After each lecture, summarize the main idea in your own words.
+Big O notation describes how an algorithm grows as the input size grows.
+It helps compare algorithms by focusing on the general pattern, not exact
+seconds.
+
+O(1) means constant time. O(n) means linear time. O(log n) means logarithmic
+time. O(n^2) means quadratic time and can become slow for large inputs.
+
+## Arrays and Linked Lists
+
+An array stores items next to each other in memory. This makes it fast to access
+an item by its index. However, inserting or deleting items in the middle can be
+slow because other items may need to move.
+
+A linked list stores items in nodes. Each node stores data and a link to the
+next node. Linked lists can make insertion easier, but finding an item can be
+slower because the list must be followed one node at a time.
+
+## Recursion Basics
+
+Recursion is when a function calls itself to solve a smaller version of the same
+problem. A recursive function needs a base case so it knows when to stop.
+
+For example, factorial can be solved recursively. The factorial of 1 is the base
+case. For larger numbers, factorial(n) is n multiplied by factorial(n - 1).
+
+Study tip: When tracing recursion, write down each function call and look for
+the base case first.
